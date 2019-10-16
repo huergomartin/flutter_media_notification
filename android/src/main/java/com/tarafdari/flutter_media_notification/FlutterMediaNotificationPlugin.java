@@ -9,7 +9,7 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
 
 import android.content.Intent;
 
-import androidx.core.content.ContextCompat;
+import androidx.annotation.Nullable;
 
 /** FlutterMediaNotificationPlugin */
 public class FlutterMediaNotificationPlugin implements MethodCallHandler {
@@ -33,7 +33,9 @@ public class FlutterMediaNotificationPlugin implements MethodCallHandler {
         final String title = call.argument("title");
         final String author = call.argument("author");
         final boolean isPlaying = call.argument("isPlaying");
-        showNotification(title, author, isPlaying);
+        final boolean showNextPrevious = call.argument("showNextPrevious");
+        final String androidNotificationIcon = call.argument("androidNotificationIcon");
+        showNotification(title, author, isPlaying,androidNotificationIcon, showNextPrevious);
         result.success(null);
         break;
       case "hideNotification":
@@ -61,13 +63,19 @@ public class FlutterMediaNotificationPlugin implements MethodCallHandler {
     });
   }
 
-  static void showNotification(String title, String author, boolean play) {
+
+  static void showNotification(String title, String author, boolean isPlaying,@Nullable String androidNotificationIcon, @Nullable boolean showNextPrevious) {
+
 
     Intent serviceIntent = new Intent(registrar.context(), NotificationPanel.class);
     serviceIntent.putExtra("title", title);
     serviceIntent.putExtra("author", author);
-    serviceIntent.putExtra("isPlaying", play);
+    serviceIntent.putExtra("isPlaying", isPlaying);
+    serviceIntent.putExtra("showNextPrevious", showNextPrevious);
 
+    if(androidNotificationIcon != null){
+      serviceIntent.putExtra("androidNotificationIcon", androidNotificationIcon);
+    }
     registrar.context().startService(serviceIntent);
   }
 
