@@ -25,15 +25,32 @@ public class NotificationPanel extends Service {
         super.onCreate();
     }
 
+    int getResourceId(String resource) {
+        String[] parts = resource.split("/");
+        String resourceType = parts[0];
+        String resourceName = parts[1];
+        return getResources().getIdentifier(resourceName, resourceType, getApplicationContext().getPackageName());
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         boolean isPlaying = intent.getBooleanExtra("isPlaying", true);
+        boolean showNextPrevious = intent.getBooleanExtra("showNextPrevious", false);
         String title = intent.getStringExtra("title");
         String author = intent.getStringExtra("author");
 
+        String androidNotificationIcon;
+        int iconId;
+
+        if(intent.getStringExtra("androidNotificationIcon") != null){
+            androidNotificationIcon = intent.getStringExtra("androidNotificationIcon");
+            iconId = getResourceId(androidNotificationIcon);
+        }else{
+            iconId = R.drawable.ic_stat_music_note;
+        }
+
+
         createNotificationChannel();
-
-
         MediaSessionCompat mediaSession = new MediaSessionCompat(this, MEDIA_SESSION_TAG);
 
 
@@ -52,40 +69,60 @@ public class NotificationPanel extends Service {
         PendingIntent pendingToggleIntent = PendingIntent.getBroadcast(this, 0, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         MediaButtonReceiver.handleIntent(mediaSession, toggleIntent);
 
-        //TODO(ALI): add media mediaSession Buttons and handle them
-        Intent nextIntent = new Intent(this, NotificationReturnSlot.class)
-                .setAction("next");
-        PendingIntent pendingNextIntent = PendingIntent.getBroadcast(this, 0, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-//        MediaButtonReceiver.handleIntent(mediaSession, nextIntent);
 
-        Intent prevIntent = new Intent(this, NotificationReturnSlot.class)
-                .setAction("prev");
-        PendingIntent pendingPrevIntent = PendingIntent.getBroadcast(this, 0, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-//        MediaButtonReceiver.handleIntent(mediaSession, prevIntent);
 
         Intent selectIntent = new Intent(this, NotificationReturnSlot.class)
                 .setAction("select");
         PendingIntent selectPendingIntent = PendingIntent.getBroadcast(this, 0, selectIntent, PendingIntent.FLAG_CANCEL_CURRENT);
 //        MediaButtonReceiver.handleIntent(mediaSession, selectIntent);
+        Notification notification;
 
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .addAction(R.drawable.baseline_skip_previous_black_48, "prev", pendingPrevIntent)
-                .addAction(iconPlayPause, titlePlayPause, pendingToggleIntent)
-                .addAction(R.drawable.baseline_skip_next_black_48, "next", pendingNextIntent)
-                .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
-                        .setShowActionsInCompactView(0, 1,2)
-                        .setShowCancelButton(true)
-                        .setMediaSession(mediaSession.getSessionToken()))
-                .setSmallIcon(R.drawable.ic_stat_music_note)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setVibrate(new long[]{0L})
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setContentTitle(title)
-                .setContentText(author)
-                .setSubText(title)
-                .setContentIntent(selectPendingIntent)
-                .setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.drawable.ic_stat_music_note))
-                .build();
+        if(!showNextPrevious){
+            notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                    .addAction(iconPlayPause, titlePlayPause, pendingToggleIntent)
+                    .setStyle(new androidx.media.app.NotificationCompat.DecoratedMediaCustomViewStyle()
+                            .setShowActionsInCompactView(0)
+                            .setShowCancelButton(true)
+                            .setMediaSession(mediaSession.getSessionToken()))
+                    .setSmallIcon(iconId)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setVibrate(new long[]{0L})
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setContentTitle(title)
+                    .setContentText(author)
+                    .setSubText(title)
+                    .setContentIntent(selectPendingIntent)
+                    .setLargeIcon(BitmapFactory.decodeResource(this.getResources(), iconId))
+                    .build();
+        }else{
+            Intent nextIntent = new Intent(this, NotificationReturnSlot.class)
+                    .setAction("next");
+            PendingIntent pendingNextIntent = PendingIntent.getBroadcast(this, 0, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            Intent prevIntent = new Intent(this, NotificationReturnSlot.class)
+                    .setAction("prev");
+            PendingIntent pendingPrevIntent = PendingIntent.getBroadcast(this, 0, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+             notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                    .addAction(R.drawable.baseline_skip_previous_black_48, "prev", pendingPrevIntent)
+                    .addAction(iconPlayPause, titlePlayPause, pendingToggleIntent)
+                    .addAction(R.drawable.baseline_skip_next_black_48, "next", pendingNextIntent)
+                    .setStyle(new androidx.media.app.NotificationCompat.MediaStyle()
+                            .setShowActionsInCompactView(0, 1,2)
+                            .setShowCancelButton(true)
+                            .setMediaSession(mediaSession.getSessionToken()))
+                    .setSmallIcon(iconId)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setVibrate(new long[]{0L})
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setContentTitle(title)
+                    .setContentText(author)
+                    .setSubText(title)
+                    .setContentIntent(selectPendingIntent)
+                    .setLargeIcon(BitmapFactory.decodeResource(this.getResources(), iconId))
+                    .build();
+        }
+
 
         startForeground(NOTIFICATION_ID, notification);
         if(!isPlaying) {
